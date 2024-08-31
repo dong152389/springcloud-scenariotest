@@ -1,0 +1,6 @@
+dynamic:
+  threadpool:
+    coreSize: 10
+    maxSize: 30
+    maxRetry: 60
+    maxCapacity: 3500
