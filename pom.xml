@@ -18,6 +18,7 @@
         <module>Gateway</module>
         <module>Common</module>
         <module>Service1</module>
+        <module>Service2</module>
         <module>Mq</module>
     </modules>
     <properties>
