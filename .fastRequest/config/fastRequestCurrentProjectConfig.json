@@ -22,6 +22,24 @@
 				}
 			],
 			"name":"Service2"
+		},
+		{
+			"hostGroup":[
+				{
+					"env":"local",
+					"url":"http://localhost:8212"
+				}
+			],
+			"name":"Mq"
+		},
+		{
+			"hostGroup":[
+				{
+					"env":"local",
+					"url":"http://localhost:8080"
+				}
+			],
+			"name":"Gateway"
 		}
 	],
 	"envList":[
@@ -35,7 +53,9 @@
 	"preScript":"",
 	"projectList":[
 		"Service1",
-		"Service2"
+		"Service2",
+		"Mq",
+		"Gateway"
 	],
 	"syncModel":{
 		"branch":"master",

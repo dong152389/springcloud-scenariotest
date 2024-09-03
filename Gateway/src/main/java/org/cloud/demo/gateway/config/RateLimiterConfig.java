@@ -1,19 +1,15 @@
-package org.dfd.gateway.config;
+package org.cloud.demo.gateway.config;
 
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Mono;
 
-/**
- * 自定义令牌桶
- * @author Fengdong.Duan
- * @create 2024/3/14 18:58
- */
 @Configuration
-public class MyKeyResolver {
+public class RateLimiterConfig {
+
     @Bean
-    KeyResolver userKeyResolver() {
+    public KeyResolver remoteAddrKeyResolver() {
         return exchange -> Mono.just(exchange.getRequest().getRemoteAddress().getAddress().getHostAddress());
     }
 }
