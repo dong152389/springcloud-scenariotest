@@ -1,5 +1,5 @@
 server:
-  port: 8211
+  port: 8210
 
 spring:
   application:
@@ -15,5 +15,6 @@ spring:
   config:
     import:
       - nacos:${spring.application.name}.yaml
-      - nacos:common.yaml
+      - nacos:threadpool.yaml
       - nacos:kafka.yaml
+      - nacos:redis.yaml
