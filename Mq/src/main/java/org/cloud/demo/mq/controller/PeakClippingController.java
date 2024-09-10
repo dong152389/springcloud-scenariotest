@@ -4,7 +4,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.common.constants.TopicConstants;
-import org.cloud.demo.common.domain.DemoValueBo;
+import org.cloud.demo.service1.domain.DemoValueBo;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.web.bind.annotation.PostMapping;

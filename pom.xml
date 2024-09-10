@@ -6,7 +6,6 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.0.13</version>
-        <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>org.dfd.spring.demo</groupId>
     <artifactId>SpringCloud</artifactId>
@@ -17,9 +16,11 @@
     <modules>
         <module>Gateway</module>
         <module>Common</module>
-        <module>Service1</module>
         <module>Service2</module>
+        <module>Service1</module>
+        <module>WorkFlow</module>
         <module>Mq</module>
+        <module>Auth</module>
     </modules>
     <properties>
         <project.version>0.0.1-SNAPSHOT</project.version>
@@ -33,6 +34,10 @@
         <hutool.version>5.8.26</hutool.version>
         <lombok.version>1.18.30</lombok.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <fastjson.version>2.0.52</fastjson.version>
+        <flowable.version>7.0.1</flowable.version>
+        <swagger.version>2.6.0</swagger.version>
+        <sa.token.version>1.39.0</sa.token.version>
     </properties>
     <dependencies>
         <dependency>
@@ -73,18 +78,40 @@
                 <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.flowable</groupId>
+                <artifactId>flowable-spring-boot-starter-process</artifactId>
+                <version>${flowable.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${sa.token.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.dfd.spring.demo</groupId>
                 <artifactId>Common</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.dfd.spring.demo</groupId>
+                <artifactId>Service1-Interface</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dfd.spring.demo</groupId>
+                <artifactId>Service2-Interface</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dfd.spring.demo</groupId>
+                <artifactId>Auth-Interface</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 </project>

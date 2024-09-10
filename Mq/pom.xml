@@ -22,7 +22,15 @@
     <dependencies>
         <dependency>
             <groupId>org.dfd.spring.demo</groupId>
+            <artifactId>Service1-Interface</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dfd.spring.demo</groupId>
             <artifactId>Common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.kafka</groupId>

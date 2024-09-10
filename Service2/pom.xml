@@ -11,6 +11,10 @@
 
     <artifactId>Service2</artifactId>
 
+    <modules>
+        <module>Service2-Interface</module>
+        <module>Service2-Biz</module>
+    </modules>
     <properties>
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
@@ -19,26 +23,5 @@
     </properties>
     <description>服务2</description>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.dfd.spring.demo</groupId>
-            <artifactId>Common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
-        </dependency>
-    </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+    <packaging>pom</packaging>
 </project>
