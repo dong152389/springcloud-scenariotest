@@ -93,6 +93,17 @@
                 <version>${sa.token.version}</version>
             </dependency>
             <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-redis-jackson</artifactId>
+                <version>${sa.token.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
+                <version>${sa.token.version}</version>
+            </dependency>
+            <!-- 提供Redis连接池 -->
+            <dependency>
                 <groupId>org.dfd.spring.demo</groupId>
                 <artifactId>Common</artifactId>
                 <version>${project.version}</version>

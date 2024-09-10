@@ -8,11 +8,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.cloud.demo.common.domain.BaseEntity;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 用户信息表
@@ -25,17 +26,11 @@ public class User extends BaseEntity implements Serializable {
     /**
      * 用户ID
      */
-    @TableId(value = "user_id", type = IdType.INPUT)
+    @TableId(value = "user_id", type = IdType.ASSIGN_ID)
     @Schema(description="用户ID")
     @NotNull(message = "用户ID不能为null")
     private Long userId;
 
-    /**
-     * 部门ID
-     */
-    @TableField(value = "dept_id")
-    @Schema(description="部门ID")
-    private Long deptId;
 
     /**
      * 用户账号
@@ -55,13 +50,6 @@ public class User extends BaseEntity implements Serializable {
     @NotBlank(message = "用户昵称不能为空")
     private String nickName;
 
-    /**
-     * 用户类型（sys_user系统用户）
-     */
-    @TableField(value = "user_type")
-    @Schema(description="用户类型（sys_user系统用户）")
-    @Size(max = 10,message = "用户类型（sys_user系统用户）最大长度要小于 10")
-    private String userType;
 
     /**
      * 用户邮箱

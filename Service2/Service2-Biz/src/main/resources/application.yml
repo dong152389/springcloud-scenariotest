@@ -15,4 +15,4 @@ spring:
   config:
     import:
       - nacos:${spring.application.name}.yaml
-      - nacos:common.yaml
+      - nacos:threadpool.yaml

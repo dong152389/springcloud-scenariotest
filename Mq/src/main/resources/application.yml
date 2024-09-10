@@ -14,5 +14,4 @@ spring:
   config:
     import:
       - nacos:${spring.application.name}.yaml
-      - nacos:kafka.yaml
       - nacos:threadpool.yaml

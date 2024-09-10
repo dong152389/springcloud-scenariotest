@@ -17,7 +17,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    <description>服务2-对外服务</description>
+    <description>认证服务</description>
 
     <dependencies>
         <dependency>
