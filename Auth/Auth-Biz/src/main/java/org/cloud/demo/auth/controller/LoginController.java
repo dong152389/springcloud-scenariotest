@@ -1,5 +1,6 @@
 package org.cloud.demo.auth.controller;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.util.SaResult;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,9 @@ public class LoginController extends BaseController {
     private final LoginService loginService;
 
     @PostMapping
-    public R<Void> login(@Validated @RequestBody LoginDTO loginDto) {
-        return toAjax(loginService.login(loginDto));
+    public R<SaTokenInfo> login(@Validated @RequestBody LoginDTO loginDto) {
+        SaTokenInfo info = loginService.login(loginDto);
+        return R.ok(info);
     }
 
     // 查询登录状态
