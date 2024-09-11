@@ -1,6 +1,6 @@
 package org.cloud.demo.common.constants;
 
-public class TaskConstants {
+public interface TaskConstants {
 
     /**
      * 流程发起人

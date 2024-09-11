@@ -21,6 +21,7 @@
         <module>WorkFlow</module>
         <module>Mq</module>
         <module>Auth</module>
+        <module>Captcha</module>
     </modules>
     <properties>
         <project.version>0.0.1-SNAPSHOT</project.version>
@@ -121,6 +122,11 @@
             <dependency>
                 <groupId>org.dfd.spring.demo</groupId>
                 <artifactId>Auth-Interface</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dfd.spring.demo</groupId>
+                <artifactId>Captcha-Interface</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

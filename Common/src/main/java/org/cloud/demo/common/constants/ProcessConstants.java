@@ -3,7 +3,7 @@ package org.cloud.demo.common.constants;
 /**
  * 流程常量信息
  */
-public class ProcessConstants {
+public interface ProcessConstants {
 
     public static final String SUFFIX = ".bpmn";
 
