@@ -5,5 +5,5 @@ package org.cloud.demo.common.validate;
  *
  * @author DFD
  */
-public interface AddGroup {
+public interface AddGroup  {
 }

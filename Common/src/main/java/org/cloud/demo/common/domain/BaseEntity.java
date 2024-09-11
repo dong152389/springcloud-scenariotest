@@ -15,7 +15,6 @@ import java.util.Map;
 @Data
 public class BaseEntity implements Serializable {
 
-
     @Serial
     private static final long serialVersionUID = -7888003697468373682L;
     /**

@@ -2,12 +2,14 @@ package org.cloud.demo.auth.domain.vo;
 
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
 @Data
 public class UserVo implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -262323364556546343L;
     private Long userId;
     private String userName;

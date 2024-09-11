@@ -1,5 +1,6 @@
 package org.cloud.demo.auth.controller;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.cloud.demo.auth.domain.dto.UserRegisterDTO;
@@ -13,16 +14,17 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("user")
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class UserController extends BaseController {
     private final UserService userService;
 
     @PostMapping("register")
-    public R<Void> register(@Validated @RequestBody UserRegisterDTO registerDTO) {
+    public R<Void> register(@Valid @RequestBody UserRegisterDTO registerDTO) {
         return toAjax(userService.register(registerDTO));
     }
 
     @GetMapping("info/{userId}")
-    public R<UserVo> getUserInfo(@NotNull(message = "用户ID不能为空")@PathVariable Long userId) {
+    public R<UserVo> getUserInfo(@NotNull(message = "用户ID不能为空") @PathVariable Long userId) {
         return R.ok(userService.getUserInfo(userId));
     }
 }
