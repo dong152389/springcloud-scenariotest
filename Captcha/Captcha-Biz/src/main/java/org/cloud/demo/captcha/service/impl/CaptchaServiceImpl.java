@@ -13,7 +13,7 @@ import org.cloud.demo.captcha.properties.GraphicCaptchaProperties;
 import org.cloud.demo.captcha.service.CaptchaService;
 import org.cloud.demo.common.constants.CacheConstants;
 import org.cloud.demo.common.constants.CaptchaConstants;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -26,7 +26,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class CaptchaServiceImpl implements CaptchaService {
     private final GraphicCaptchaProperties graphicCaptchaProperties;
-    private final RedisTemplate redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     public String captchaImage() {
