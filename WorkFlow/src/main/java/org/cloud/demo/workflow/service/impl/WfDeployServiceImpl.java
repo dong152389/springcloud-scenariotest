@@ -43,6 +43,15 @@ public class WfDeployServiceImpl implements WfDeployService {
     private final RepositoryService repositoryService;
 
 
+    /**
+     * 保存内部部署表单信息
+     *
+     * @param deployId 部署ID
+     * @param bpmnModel BPMN模型
+     * @return 保存是否成功
+     * @throws ServiceException 如果开始节点不存在，抛出此异常
+     * @Transactional(rollbackFor = Exception.class) 如果在执行方法时发生异常，则回滚事务
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveInternalDeployForm(String deployId, BpmnModel bpmnModel) {
@@ -154,6 +163,13 @@ public class WfDeployServiceImpl implements WfDeployService {
         return TableDataInfo.build(page);
     }
 
+    /**
+     * 更新流程定义状态
+     *
+     * @param definitionId 流程定义ID
+     * @param state 流程定义状态（ACTIVE激活或SUSPENDED挂起）
+     * @throws IllegalArgumentException 如果state参数不为ACTIVE或SUSPENDED则抛出此异常
+     */
     @Override
     @Transactional
     public void updateState(String definitionId, String state) {
@@ -172,6 +188,12 @@ public class WfDeployServiceImpl implements WfDeployService {
         return IoUtil.readUtf8(inputStream);
     }
 
+    /**
+     * 根据部署ID列表删除部署
+     *
+     * @param list 部署ID列表
+     * @return 无返回值
+     */
     @Override
     public void deleteByIds(List<String> list) {
         for (String deployId : list) {

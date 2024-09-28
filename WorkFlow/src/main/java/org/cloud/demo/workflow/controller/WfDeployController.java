@@ -75,7 +75,7 @@ public class WfDeployController extends BaseController {
      * @param definitionId 流程定义ID
      * @return xml文件内容
      */
-    @Operation(description = "激活或挂起流程", parameters = {
+    @Operation(description = "读取xml文件", parameters = {
             @Parameter(name = "definitionId", description = "流程定义ID")})
     @GetMapping("/bpmnXml/{definitionId}")
     public R<String> getBpmnXml(@PathVariable(value = "definitionId") String definitionId) {

@@ -38,7 +38,11 @@ public class WfCategoryController extends BaseController {
     }
 
     /**
-     * 查询流程分类列表
+     * 查询流程分类列表(含分页)
+     *
+     * @param category  查询条件
+     * @param pageQuery 分页参数
+     * @return
      */
     @GetMapping("list")
     @Operation(description = "查询流程分类列表")
@@ -51,7 +55,7 @@ public class WfCategoryController extends BaseController {
      */
     @Operation(description = "修改流程分类")
     @PutMapping("edit")
-    public R<Void> edit(@Validated(value = EditGroup.class)  @RequestBody WfCategoryDTO category) {
+    public R<Void> edit(@Validated(value = EditGroup.class) @RequestBody WfCategoryDTO category) {
         return toAjax(categoryService.update(category));
     }
 

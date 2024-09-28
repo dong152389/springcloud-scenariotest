@@ -97,54 +97,87 @@ public class WfModelServiceImpl implements WfModelService {
         if (ObjectUtil.isNull(model)) {
             throw new ServiceException("流程模型不存在！");
         }
+        // 将wfModelDTO的属性复制到model对象中，忽略key属性
         BeanUtil.copyProperties(wfModelDTO, model, CopyOptions.create(Model.class, true, "key"));
+
+        // 获取model的元数据信息
         // 这里并不设计流程编辑图编辑，版本不增加
         String metaInfo = model.getMetaInfo();
         ModelMetaInfoBO modelMetaInfoBO = JSON.parseObject(metaInfo, ModelMetaInfoBO.class);
+
+        // 如果wfModelDTO的desc不为空，则更新modelMetaInfoBO的desc
         if (StrUtil.isNotBlank(wfModelDTO.getDesc())) {
             modelMetaInfoBO.setDesc(wfModelDTO.getDesc());
         }
+
+        // 如果wfModelDTO的category不为空，则更新modelMetaInfoBO的category
         if (StrUtil.isNotBlank(wfModelDTO.getCategory())) {
             modelMetaInfoBO.setCategory(wfModelDTO.getCategory());
         }
+
+        // 设置更新用户为"admin"
         modelMetaInfoBO.setUpdateUser("admin");
+
+        // 设置更新时间为当前时间
         modelMetaInfoBO.setUpdateTime(new Date());
+
+        // 将更新后的modelMetaInfoBO转为JSON字符串，并设置给model的metaInfo属性
         model.setMetaInfo(JSON.toJSONString(modelMetaInfoBO));
+
+        // 保存更新后的model对象
         repositoryService.saveModel(model);
     }
+
 
     @Override
     public TableDataInfo<WfModelVo> list(WfModelDTO wfModelDTO, PageQuery pageQuery) {
         // 构建一个查询对象，查询最新的版本，历史版本在单独的历史分支查看
         ModelQuery modelQuery = repositoryService.createModelQuery().latestVersion();
+        // 按照创建时间降序排列
         modelQuery.orderByCreateTime().desc();
+
         // 构建查询条件
+        // 如果流程模型关键字不为空，则添加查询条件
         if (StrUtil.isNotBlank(wfModelDTO.getKey())) {
             modelQuery.modelKey(wfModelDTO.getKey());
         }
+        // 如果流程模型名称不为空，则添加模糊查询条件
         if (StrUtil.isNotBlank(wfModelDTO.getName())) {
             modelQuery.modelNameLike("%" + wfModelDTO.getName() + "%");
         }
+        // 如果流程模型分类不为空，则添加模糊查询条件
         if (StrUtil.isNotBlank(wfModelDTO.getCategory())) {
             modelQuery.modelCategoryLike("%" + wfModelDTO.getCategory() + "%");
         }
+
         // 查询总数
         long count = modelQuery.count();
+        // 如果没有记录，则返回空的TableDataInfo对象
         if (count <= 0) {
             return TableDataInfo.build();
         }
+
+        // 计算偏移量
         //偏移量
         int offset = (pageQuery.getPageNum() - 1) * pageQuery.getPageSize();
 
+        // 执行分页查询
         // 分页查询
         List<Model> models = modelQuery.listPage(offset, pageQuery.getPageSize());
+
+        // 将查询结果转换为WfModelVo列表
         List<WfModelVo> modelVos = buildModelVo(models, false);
+
+        // 创建分页对象，并设置总记录数和记录列表
         //分页
         Page<WfModelVo> page = new Page<>();
         page.setTotal(count);
         page.setRecords(modelVos);
+
+        // 返回包含分页信息的TableDataInfo对象
         return TableDataInfo.build(page);
     }
+
 
     /**
      * 这里要这样理解，设计流程图不能是在原来的基础上修改，而是新增，对版本号+1，然后保存
@@ -237,27 +270,37 @@ public class WfModelServiceImpl implements WfModelService {
                 .modelKey(wfModelDTO.getKey())
                 .orderByModelVersion()
                 .desc();
-        //TODO 目前还做不了在历史模型中进行条件检索，因为如果在modelQuery中增加检索条件，那么排除的第一条可能不是最新一条
 
+        // TODO: 目前还无法实现在历史模型中进行条件检索，因为如果在modelQuery中添加检索条件，可能会导致排除的第一条记录不是最新的记录
         // 去掉最新版
         long pageTotal = modelQuery.count() - 1;
         if (pageTotal <= 0) {
             return TableDataInfo.build();
         }
         int offset = (pageQuery.getPageNum() - 1) * pageQuery.getPageSize();
+
         // 如果是第一页，跳过第一条记录
+        // 如果是第一页，则跳过第一条记录
         if (pageQuery.getPageNum() == 1) {
             offset += 1;
         }
         int pageSize = pageQuery.getPageSize();
+
+        // 获取分页数据
         List<Model> models = modelQuery.listPage(offset, pageSize);
+
+        // 构建WfModelVo列表
         List<WfModelVo> list = buildModelVo(models, false);
 
+        // 创建分页对象
         Page<WfModelVo> page = new Page<>();
         page.setTotal(pageTotal);
         page.setRecords(list);
+
+        // 构建TableDataInfo对象并返回
         return TableDataInfo.build(page);
     }
+
 
     @Override
     public WfModelVo getModel(String modelId) {
@@ -280,36 +323,52 @@ public class WfModelServiceImpl implements WfModelService {
         if (ObjectUtil.isNull(model)) {
             throw new ServiceException("流程模型不存在！");
         }
+
+        // 获取流程设计图的字节数组
         // 以字节数组返回流程设计图
         byte[] bpmXmlByte = repositoryService.getModelEditorSource(modelId);
         if (ArrayUtil.isEmpty(bpmXmlByte)) {
             throw new ServiceException("请先设计流程图！");
         }
+
+        // 将字节数组转换为UTF-8编码的字符串
         String xml = StrUtil.utf8Str(bpmXmlByte);
+
+        // 解析流程设计图的字符串，获取BpmnModel对象
         BpmnModel bpmnModel = ModelUtils.getBpmnModel(xml);
+
+        // 获取流程名称，并加上后缀
         // 流程名称
         String processName = model.getName() + ProcessConstants.SUFFIX;
-        // 部署流程
+
+        // 创建部署对象，并设置相关属性,和用户和组发起权限
+
         Deployment deployment = repositoryService.createDeployment()
                 .category(model.getCategory())
                 .name(model.getName())
                 .key(model.getKey())
                 .addBpmnModel(processName, bpmnModel)
                 .deploy();
+
         // 创建一个查询流程对象，根据部署ID查询
         ProcessDefinition processDefinition = repositoryService.createProcessDefinitionQuery()
                 .deploymentId(deployment.getId())
                 .singleResult();
+
         // 修改流程定义的分类，以便于搜索
         repositoryService.setProcessDefinitionCategory(processDefinition.getId(), model.getCategory());
-        // 设置流程定义的权限，建议抽取成一个方法，如果是集合遍历添加
+
+        // 设置流程定义的权限
         // 用户
         repositoryService.addCandidateStarterUser(processDefinition.getId(), "123L");
+
         // 组
         repositoryService.addCandidateStarterGroup(processDefinition.getId(), "321L");
+
         // 保存部署表单
         return wfDeployService.saveInternalDeployForm(deployment.getId(), bpmnModel);
     }
+
 
     /**
      * 构建model对象
@@ -321,28 +380,53 @@ public class WfModelServiceImpl implements WfModelService {
     private List<WfModelVo> buildModelVo(List<Model> models, boolean bpmnXml) {
         return models.stream().map(model -> {
             WfModelVo wfModelVo = new WfModelVo();
+
+            // 设置模型信息
+            // 设置模型ID
             wfModelVo.setModelId(model.getId());
+            // 设置模型名称
             wfModelVo.setModelName(model.getName());
+            // 设置模型键
             wfModelVo.setModelKey(model.getKey());
+            // 设置模型分类
             wfModelVo.setCategory(model.getCategory());
+            // 设置模型版本
             wfModelVo.setVersion(model.getVersion());
+
             String metaInfo = model.getMetaInfo();
             if (StrUtil.isNotBlank(metaInfo)) {
+                // 解析元数据信息
                 ModelMetaInfoBO modelMetaInfoBO = JSON.parseObject(metaInfo, ModelMetaInfoBO.class);
+
+                // 设置模型详细信息
+                // 设置模型描述
                 wfModelVo.setDescription(modelMetaInfoBO.getDesc());
+                // 设置表单ID
                 wfModelVo.setFormId(modelMetaInfoBO.getFormId());
+                // 设置创建时间
                 wfModelVo.setCreateTime(modelMetaInfoBO.getCreateTime());
+                // 设置更新时间
                 wfModelVo.setUpdateTime(modelMetaInfoBO.getUpdateTime());
+                // 设置创建用户
                 wfModelVo.setCreateUser(modelMetaInfoBO.getCreateUser());
+                // 设置更新用户
                 wfModelVo.setUpdateUser(modelMetaInfoBO.getUpdateUser());
             }
+
             if (bpmnXml) {
+                // 如果需要封装bpmnXml，则执行以下操作
+                // 获取模型编辑器的源数据
                 byte[] modelEditorSource = repositoryService.getModelEditorSource(model.getId());
+                // 将字节数组转换为UTF-8字符串
                 String bpmn = StrUtil.utf8Str(modelEditorSource);
+                // 设置BPMN XML
                 wfModelVo.setBpmnXml(bpmn);
             }
+
             return wfModelVo;
         }).collect(Collectors.toList());
     }
+
+
 
 }
