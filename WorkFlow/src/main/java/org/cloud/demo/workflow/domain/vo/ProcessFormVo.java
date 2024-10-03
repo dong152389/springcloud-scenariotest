@@ -10,6 +10,20 @@ import java.util.Map;
 @Data
 public class ProcessFormVo {
     /**
+     * 标题
+     */
+    private String title;
+
+    /**
+     * 禁用表单
+     */
+    private Boolean disabled = false;
+    /**
+     * 表单按钮
+     */
+    private Boolean formBtns = true;
+
+    /**
      * 表单模型
      */
     private Map<String, Object> formModel;

@@ -2,12 +2,14 @@ package org.cloud.demo.workflow.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.common.constants.ProcessConstants;
 import org.cloud.demo.common.enums.ProcessStatus;
 import org.cloud.demo.common.web.domain.TableDataInfo;
@@ -15,8 +17,7 @@ import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
 import org.cloud.demo.workflow.domain.WfDeployForm;
 import org.cloud.demo.workflow.domain.dto.ProcessQuery;
-import org.cloud.demo.workflow.domain.vo.ProcessFormVo;
-import org.cloud.demo.workflow.domain.vo.WfDefinitionVo;
+import org.cloud.demo.workflow.domain.vo.*;
 import org.cloud.demo.workflow.mapper.WfDeployFormMapper;
 import org.cloud.demo.workflow.service.WfProcessService;
 import org.cloud.demo.workflow.service.WfTaskService;
@@ -25,20 +26,24 @@ import org.cloud.demo.workflow.utils.ProcessUtils;
 import org.flowable.bpmn.constants.BpmnXMLConstants;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.StartEvent;
-import org.flowable.engine.HistoryService;
-import org.flowable.engine.IdentityService;
-import org.flowable.engine.RepositoryService;
-import org.flowable.engine.RuntimeService;
+import org.flowable.engine.*;
 import org.flowable.engine.history.HistoricProcessInstance;
+import org.flowable.engine.history.HistoricProcessInstanceQuery;
 import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.repository.ProcessDefinitionQuery;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.task.api.Task;
+import org.flowable.task.api.TaskInfo;
+import org.flowable.task.api.history.HistoricTaskInstance;
+import org.flowable.variable.api.history.HistoricVariableInstance;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WfProcessServiceImpl implements WfProcessService {
@@ -47,69 +52,112 @@ public class WfProcessServiceImpl implements WfProcessService {
     private final HistoryService historyService;
     private final IdentityService identityService;
     private final RuntimeService runtimeService;
+    private final TaskService taskService;
     private final WfTaskService wfTaskService;
     private final WfDeployFormMapper wfDeployFormMapper;
 
 
+    /**
+     * 根据流程定义ID、部署ID和流程实例ID查询对应的流程表单内容
+     *
+     * @param definitionId 流程定义ID
+     * @param deployId     部署ID
+     * @param procInsId    流程实例ID
+     * @return 流程表单对象
+     */
     @Override
     public ProcessFormVo selectFormContent(String definitionId, String deployId, String procInsId) {
+        // 初始化流程表单对象
         ProcessFormVo processFormVo = new ProcessFormVo();
+        // 根据流程定义ID获取BPMN模型
         BpmnModel bpmnModel = repositoryService.getBpmnModel(definitionId);
+        // 如果BPMN模型为空，则抛出异常
         if (ObjectUtil.isNull(bpmnModel)) throw new ServiceException("流程图设计为空！");
+        // 从BPMN模型中获取开始事件
         StartEvent startEvent = ModelUtils.getStartEvent(bpmnModel);
+        // 如果开始事件为空，则抛出异常
         if (ObjectUtil.isNull(startEvent)) throw new ServiceException("流程图中没有开始节点，请检查流程设计！");
+        // 根据部署ID和开始事件的信息查询对应的流程表单
         WfDeployForm wfDeployForm = wfDeployFormMapper.selectOne(new LambdaQueryWrapper<>(WfDeployForm.class)
                 .eq(WfDeployForm::getDeployId, deployId)
                 .eq(WfDeployForm::getFormKey, startEvent.getFormKey())
                 .eq(WfDeployForm::getNodeKey, startEvent.getId()));
+        // 如果查询到的流程表单为空，则抛出异常
         if (ObjectUtil.isNull(wfDeployForm)) throw new ServiceException("流程表单为空！");
+        // 获取流程表单的内容
         String formContent = wfDeployForm.getContent();
+        // 如果表单内容为空或仅包含空白字符，则抛出异常
         if (StrUtil.isBlank(formContent)) throw new ServiceException("获取流程表单失败！");
-        Map<String, Object> map = JSON.parseObject(formContent, Map.class);
-        processFormVo.setFormModel(map);
-        // 这个字段第一次发起并不能携带
+        // 将表单内容解析为Map对象
+        Map<String, Object> formModel = JSON.parseObject(formContent, Map.class);
+        // 设置表单按钮的显示状态为不显示
+        processFormVo.setFormBtns(false);
+        // 设置表单模型
+        processFormVo.setFormModel(formModel);
+        // 如果流程实例ID不为空，则执行以下逻辑
         if (StrUtil.isNotBlank(procInsId)) {
-            // 获取流程实例
+            // 根据流程实例ID查询历史流程实例信息，并包含流程变量
             HistoricProcessInstance historicProcIns = historyService.createHistoricProcessInstanceQuery()
                     .processInstanceId(procInsId)
                     .includeProcessVariables()
                     .singleResult();
+            // 设置流程表单的数据为历史流程实例中的流程变量
             processFormVo.setFormData(historicProcIns.getProcessVariables());
         }
+        // 返回流程表单对象
         return processFormVo;
     }
 
+
+    /**
+     * 根据流程定义ID启动流程实例
+     *
+     * @param processDefId 流程定义ID
+     * @param variables    流程变量
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void startProcessByDefId(String processDefId, Map<String, Object> variables) {
-        // 比如这里查询出来用户的id和组
-        String userId = "123L";
-        String groupId = "321";
+        // 查询流程定义
         ProcessDefinition processDefinition = repositoryService
                 .createProcessDefinitionQuery()
                 .processDefinitionId(processDefId)
-                .startableByUserOrGroups(userId, Collections.singleton(groupId))
                 .singleResult();
+        // 如果流程定义不存在，抛出异常
         if (ObjectUtil.isNull(processDefinition)) {
             throw new ServiceException("流程已被挂起，请先激活流程");
         }
-        // 设置流程发起人ID
+        // 设置流程发起人ID,应该从数据库查询
+        String userId = "1L";
         identityService.setAuthenticatedUserId(userId);
+        // 将发起人ID作为流程变量
         variables.put(BpmnXMLConstants.ATTRIBUTE_EVENT_START_INITIATOR, userId);
         // 设置流程状态为进行中
         variables.put(ProcessConstants.PROCESS_STATUS_KEY, ProcessStatus.RUNNING.getStatus());
-        // 发起流程实例
+        // 发起流程实例，并传入流程变量
         ProcessInstance processInstance = runtimeService.startProcessInstanceById(processDefinition.getId(), variables);
-        // 第一个用户任务为发起人，则自动完成任务
+        // 如果第一个用户任务是发起人，则自动完成该任务
         wfTaskService.startFirstTask(processInstance, variables);
     }
 
+
+    /**
+     * 查询流程定义列表
+     *
+     * @param processQuery 流程查询对象
+     * @param pageQuery    分页查询对象
+     * @return 流程定义列表
+     */
     @Override
     public TableDataInfo<WfDefinitionVo> selectPageStartProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
+        String userId = "123L";
+        String groupId = "321L";
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
                 .latestVersion()                //最新版本
                 .active()                       //活跃状态
                 .orderByProcessDefinitionKey()  //根据标识排序
+                .startableByUserOrGroups(userId, Collections.singleton(groupId))  //权限
                 .desc();//倒叙
 
         // 构建查询参数
@@ -145,4 +193,149 @@ public class WfProcessServiceImpl implements WfProcessService {
         page.setRecords(wfDefinitionVos);
         return TableDataInfo.build(page);
     }
+
+    /**
+     * 获取当前用户的发起的流程列表
+     *
+     * @param processQuery 查询条件
+     * @param pageQuery    分页查询条件
+     * @return 发起的流程列表
+     */
+    @Override
+    public TableDataInfo<WfMyProcessVo> selectPageOwnProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
+        String userId = "1L";
+
+        // 查询由特定用户启动的所有流程实例，并按启动时间降序排列
+        HistoricProcessInstanceQuery historicProcessInstanceQuery = historyService.createHistoricProcessInstanceQuery()
+                .startedBy(userId)
+                .orderByProcessInstanceStartTime()
+                .desc();
+
+        // 构建查询条件
+        ProcessUtils.buildProcessSearch(historicProcessInstanceQuery, processQuery);
+
+        // 分页条件
+        long pageTotal = historicProcessInstanceQuery.count();
+        if (pageTotal <= 0) {
+            return TableDataInfo.build();
+        }
+
+        int pageSize = pageQuery.getPageSize();
+        int offset = pageSize * (pageQuery.getPageNum() - 1);
+
+        List<HistoricProcessInstance> historicProcessInstances = historicProcessInstanceQuery.listPage(offset, pageSize);
+        List<WfMyProcessVo> taskVoList = new ArrayList<>(historicProcessInstances.size());
+
+        // 批量获取流程状态和分类，避免重复查询
+        Map<String, String> processStatusMap = getProcessStatusMap(historicProcessInstances);
+        Map<String, String> categoryMap = getCategoryMap(historicProcessInstances);
+
+        for (HistoricProcessInstance processInstance : historicProcessInstances) {
+            WfMyProcessVo vo = new WfMyProcessVo();
+            vo.setProcDefId(processInstance.getProcessDefinitionId());
+            vo.setProcDefKey(processInstance.getProcessDefinitionKey());
+            vo.setProcDefName(processInstance.getProcessDefinitionName());
+            vo.setProcDefVersion(processInstance.getProcessDefinitionVersion());
+            vo.setProcInsId(processInstance.getId());
+
+            // 设置流程状态
+            String processStatus = processStatusMap.getOrDefault(processInstance.getId(),
+                    ObjectUtil.isNull(processInstance.getEndTime()) ? ProcessStatus.RUNNING.getStatus() : ProcessStatus.COMPLETED.getStatus());
+            vo.setProcessStatus(processStatus);
+
+            // 设置流程分类
+            vo.setCategory(categoryMap.get(processInstance.getDeploymentId()));
+
+            vo.setSubmitTime(processInstance.getStartTime());
+            vo.setFinishTime(processInstance.getEndTime());
+
+            // 获取当前节点
+            List<Task> tasks = taskService.createTaskQuery().processInstanceId(processInstance.getId()).includeIdentityLinks().list();
+            String taskNames = tasks.stream()
+                    .map(TaskInfo::getName)
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.joining(","));
+            vo.setCurrentNode(taskNames);
+
+            taskVoList.add(vo);
+        }
+        Page<WfMyProcessVo> page = new Page<>();
+        page.setTotal(pageTotal);
+        page.setRecords(taskVoList);
+        return TableDataInfo.build(page);
+    }
+
+    /**
+     * 查询流程详情信息
+     *
+     * @param procInsId 流程实例ID
+     * @param taskId    任务ID
+     */
+    @Override
+    public WfProcessDetailVo queryProcessDetail(String procInsId, String taskId) {
+        WfProcessDetailVo wfProcessDetailVo = new WfProcessDetailVo();
+        // 获取流程实例
+        HistoricProcessInstance hisProcIns = historyService.createHistoricProcessInstanceQuery()
+                .processInstanceId(procInsId)
+                .includeProcessVariables() //包括流程变量
+                .singleResult();
+        if (StrUtil.isNotBlank(taskId)) {
+            HistoricTaskInstance hisTaskIns = historyService.createHistoricTaskInstanceQuery()
+                    .taskId(taskId)
+                    .includeIdentityLinks()
+                    .includeProcessVariables()
+                    .includeTaskLocalVariables()
+                    .singleResult();
+            if (ObjectUtil.isNull(hisTaskIns)) {
+                throw new ServiceException("没有可办理的任务！");
+            }
+            wfProcessDetailVo.setProcessFormVo(currTaskFormData(hisProcIns.getDeploymentId(),hisTaskIns));
+        }
+
+
+        return null;
+    }
+
+
+    private ProcessFormVo currTaskFormData(String deploymentId, HistoricTaskInstance hisTaskIns) {
+        WfDeployFormVo wfDeployFormVo = wfDeployFormMapper.selectVoOne(new LambdaQueryWrapper<WfDeployForm>()
+                .eq(WfDeployForm::getDeployId, deploymentId)
+                .eq(WfDeployForm::getFormKey, hisTaskIns.getFormKey())
+                .eq(WfDeployForm::getNodeKey, hisTaskIns.getTaskDefinitionKey()));
+        if(ObjectUtil.isNotNull(wfDeployFormVo)){
+
+        }
+        //todo
+        return null;
+    }
+
+    // 获取流程状态的映射
+    private Map<String, String> getProcessStatusMap(List<HistoricProcessInstance> instances) {
+        Map<String, String> statusMap = new HashMap<>();
+        for (HistoricProcessInstance instance : instances) {
+            HistoricVariableInstance variableInstance = historyService.createHistoricVariableInstanceQuery()
+                    .processInstanceId(instance.getId())
+                    .variableName(ProcessConstants.PROCESS_STATUS_KEY)
+                    .singleResult();
+            if (ObjectUtil.isNotNull(variableInstance)) {
+                statusMap.put(instance.getId(), Convert.toStr(variableInstance.getValue()));
+            }
+        }
+        return statusMap;
+    }
+
+    // 获取流程分类的映射
+    private Map<String, String> getCategoryMap(List<HistoricProcessInstance> instances) {
+        Map<String, String> categoryMap = new HashMap<>();
+        for (HistoricProcessInstance instance : instances) {
+            Deployment deployment = repositoryService.createDeploymentQuery()
+                    .deploymentId(instance.getDeploymentId())
+                    .singleResult();
+            if (ObjectUtil.isNotNull(deployment)) {
+                categoryMap.put(instance.getDeploymentId(), Convert.toStr(deployment.getCategory()));
+            }
+        }
+        return categoryMap;
+    }
+
 }

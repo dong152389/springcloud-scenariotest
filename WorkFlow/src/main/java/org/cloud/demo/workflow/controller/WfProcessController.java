@@ -11,6 +11,8 @@ import org.cloud.demo.common.web.page.PageQuery;
 import org.cloud.demo.workflow.domain.dto.ProcessQuery;
 import org.cloud.demo.workflow.domain.vo.ProcessFormVo;
 import org.cloud.demo.workflow.domain.vo.WfDefinitionVo;
+import org.cloud.demo.workflow.domain.vo.WfMyProcessVo;
+import org.cloud.demo.workflow.domain.vo.WfProcessDetailVo;
 import org.cloud.demo.workflow.service.WfProcessService;
 import org.springframework.web.bind.annotation.*;
 
@@ -70,11 +72,37 @@ public class WfProcessController extends BaseController {
      * 查询可发起流程列表
      *
      * @param processQuery 查询参数
-     * @param pageQuery 分页参数
+     * @param pageQuery    分页参数
      */
     @GetMapping(value = "/list")
     public TableDataInfo<WfDefinitionVo> startProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
         return wfProcessService.selectPageStartProcessList(processQuery, pageQuery);
+    }
+
+
+    /**
+     * 获取当前用户的发起的流程列表
+     *
+     * @param processQuery 查询条件
+     * @param pageQuery    分页查询条件
+     * @return 待办任务列表
+     */
+    @GetMapping(value = "/ownList")
+    @Operation(description = "获取当前用户的待办任务列表", parameters = {@Parameter(name = "processQuery", description = "查询条件"),
+            @Parameter(name = "pageQuery", description = "分页查询条件")})
+    public TableDataInfo<WfMyProcessVo> ownProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
+        return wfProcessService.selectPageOwnProcessList(processQuery, pageQuery);
+    }
+
+    /**
+     * 查询流程详情信息
+     *
+     * @param procInsId 流程实例ID
+     * @param taskId 任务ID
+     */
+    @GetMapping("/detail")
+    public R<WfProcessDetailVo> detail(String procInsId, String taskId) {
+        return R.ok(wfProcessService.queryProcessDetail(procInsId, taskId));
     }
 }
 

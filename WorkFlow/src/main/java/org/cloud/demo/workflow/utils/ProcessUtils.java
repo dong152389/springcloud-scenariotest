@@ -2,6 +2,7 @@ package org.cloud.demo.workflow.utils;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
+import org.cloud.demo.common.enums.ProcessStatus;
 import org.cloud.demo.workflow.domain.dto.ProcessQuery;
 import org.flowable.common.engine.api.query.Query;
 import org.flowable.common.engine.impl.db.SuspensionState;
@@ -110,6 +111,16 @@ public class ProcessUtils {
             query.startedAfter(DateUtil.parseDate(params.get("beginTime").toString()));
             query.startedBefore(DateUtil.parseDate(params.get("endTime").toString()));
         }
+        // 流程状态
+        String processState = process.getState();
+        if(StrUtil.isNotBlank(processState)){
+            if(processState.equals(ProcessStatus.RUNNING.getStatus())){
+                query.unfinished();
+            }else if (processState.equals(ProcessStatus.COMPLETED.getStatus())){
+                query.finished();
+            }else if (processState.equals(ProcessStatus.CANCELED.getStatus())){
+                query.deleted();
+            }
+        }
     }
-
 }
