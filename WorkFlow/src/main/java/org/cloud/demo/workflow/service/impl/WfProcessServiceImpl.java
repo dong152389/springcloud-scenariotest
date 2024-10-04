@@ -3,6 +3,10 @@ package org.cloud.demo.workflow.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.date.BetweenFormatter;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
@@ -27,12 +31,14 @@ import org.flowable.bpmn.constants.BpmnXMLConstants;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.StartEvent;
 import org.flowable.engine.*;
+import org.flowable.engine.history.HistoricActivityInstance;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.history.HistoricProcessInstanceQuery;
 import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.repository.ProcessDefinitionQuery;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.engine.task.Comment;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.TaskInfo;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -40,6 +46,7 @@ import org.flowable.variable.api.history.HistoricVariableInstance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -55,6 +62,7 @@ public class WfProcessServiceImpl implements WfProcessService {
     private final TaskService taskService;
     private final WfTaskService wfTaskService;
     private final WfDeployFormMapper wfDeployFormMapper;
+    private final userservice
 
 
     /**
@@ -289,23 +297,80 @@ public class WfProcessServiceImpl implements WfProcessService {
             if (ObjectUtil.isNull(hisTaskIns)) {
                 throw new ServiceException("没有可办理的任务！");
             }
-            wfProcessDetailVo.setProcessFormVo(currTaskFormData(hisProcIns.getDeploymentId(),hisTaskIns));
+            wfProcessDetailVo.setProcessFormVo(currTaskFormData(hisProcIns.getDeploymentId(), hisTaskIns));
+        }
+        // 获取Bpmn模型信息
+        InputStream inputStream = repositoryService.getProcessModel(hisProcIns.getProcessDefinitionId());
+        String bpmnXmlStr = StrUtil.utf8Str(IoUtil.readBytes(inputStream, false));
+        BpmnModel bpmnModel = ModelUtils.getBpmnModel(bpmnXmlStr);
+        wfProcessDetailVo.setBpmnXml(bpmnXmlStr);
+        wfProcessDetailVo.setHistoryProcNodeList(historyProcNodeList(hisProcIns));
+//        wfProcessDetailVo.setProcessFormList(processFormList(bpmnModel, historicProcIns));
+//        wfProcessDetailVo.setFlowViewer(getFlowViewer(bpmnModel, procInsId));
+        return wfProcessDetailVo;
+    }
+
+    private List<WfProcNodeVo> historyProcNodeList(HistoricProcessInstance hisProcIns) {
+        String procInsId = hisProcIns.getId();
+        List<HistoricActivityInstance> historicActivityInstances = historyService.createHistoricActivityInstanceQuery()
+                .processInstanceId(procInsId)
+                .activityTypes(CollUtil.newHashSet(BpmnXMLConstants.ELEMENT_EVENT_START, BpmnXMLConstants.ELEMENT_EVENT_END, BpmnXMLConstants.ELEMENT_TASK_USER))
+                .orderByHistoricActivityInstanceStartTime().desc()
+                .orderByHistoricActivityInstanceEndTime().desc()
+                .list();
+        List<Comment> processInstanceComments = taskService.getProcessInstanceComments(procInsId);
+        for (HistoricActivityInstance activityInstance : historicActivityInstances) {
+            WfProcNodeVo elementVo = new WfProcNodeVo();
+            elementVo.setActivityId(activityInstance.getActivityId());
+            elementVo.setActivityName(activityInstance.getActivityName());
+            elementVo.setProcDefId(activityInstance.getProcessDefinitionId());
+            elementVo.setActivityType(activityInstance.getActivityType());
+            elementVo.setCreateTime(activityInstance.getStartTime());
+            elementVo.setEndTime(activityInstance.getEndTime());
+            if (ObjectUtil.isNotNull(activityInstance.getDurationInMillis())) {
+                elementVo.setDuration(DateUtil.formatBetween(activityInstance.getDurationInMillis(), BetweenFormatter.Level.SECOND));
+            }
+            if (BpmnXMLConstants.ELEMENT_EVENT_START.equals(activityInstance.getActivityType())) {
+                if (ObjectUtil.isNotNull(hisProcIns)) {
+                    Long userId = Long.parseLong(hisProcIns.getStartUserId());
+                    String nickName = userService.selectNickNameById(userId);
+                    if (nickName != null) {
+                        elementVo.setAssigneeId(userId);
+                        elementVo.setAssigneeName(nickName);
+                    }
+                }
+            }
         }
 
-
-        return null;
     }
 
 
+    /**
+     * 获取当前任务表单数据
+     *
+     * @param deploymentId 流程部署ID
+     * @param hisTaskIns   历史任务实例
+     * @return 返回当前任务表单数据
+     */
     private ProcessFormVo currTaskFormData(String deploymentId, HistoricTaskInstance hisTaskIns) {
         WfDeployFormVo wfDeployFormVo = wfDeployFormMapper.selectVoOne(new LambdaQueryWrapper<WfDeployForm>()
                 .eq(WfDeployForm::getDeployId, deploymentId)
                 .eq(WfDeployForm::getFormKey, hisTaskIns.getFormKey())
                 .eq(WfDeployForm::getNodeKey, hisTaskIns.getTaskDefinitionKey()));
-        if(ObjectUtil.isNotNull(wfDeployFormVo)){
-
+        if (ObjectUtil.isNotNull(wfDeployFormVo)) {
+            ProcessFormVo processFormVo = new ProcessFormVo();
+            // 表单内容
+            String content = wfDeployFormVo.getContent();
+            if (StrUtil.isNotBlank(content)) {
+                Map<String, Object> formModel = JSON.parseObject(content, Map.class);
+                if (MapUtil.isNotEmpty(formModel)) {
+                    processFormVo.setFormModel(formModel);
+                    processFormVo.setFormData(hisTaskIns.getTaskLocalVariables());
+                    processFormVo.setFormBtns(false);
+                }
+            }
+            return processFormVo;
         }
-        //todo
         return null;
     }
 

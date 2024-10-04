@@ -10,6 +10,7 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.cloud.demo.common.constants.ProcessConstants;
+import org.cloud.demo.common.utils.LoginUtils;
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
@@ -55,7 +56,7 @@ public class WfModelServiceImpl implements WfModelService {
         }
         modelMetaInfoBO.setVersion(latestVersion);
         modelMetaInfoBO.setUpdateTime(new Date());
-        modelMetaInfoBO.setUpdateUser("admin");
+        modelMetaInfoBO.setUpdateUser(LoginUtils.getUserName());
         return JSON.toJSONString(modelMetaInfoBO);
     }
 
@@ -69,7 +70,7 @@ public class WfModelServiceImpl implements WfModelService {
         model.setName(wfModelDTO.getName());
         model.setVersion(1);
         ModelMetaInfoBO modelMetaInfoBO = new ModelMetaInfoBO();
-        modelMetaInfoBO.setCreateUser("admin");
+        modelMetaInfoBO.setCreateUser(LoginUtils.getUserName());
         modelMetaInfoBO.setCreateTime(new Date());
         modelMetaInfoBO.setVersion(1);
         modelMetaInfoBO.setDesc(wfModelDTO.getDesc());
@@ -115,8 +116,7 @@ public class WfModelServiceImpl implements WfModelService {
             modelMetaInfoBO.setCategory(wfModelDTO.getCategory());
         }
 
-        // 设置更新用户为"admin"
-        modelMetaInfoBO.setUpdateUser("admin");
+        modelMetaInfoBO.setUpdateUser(LoginUtils.getUserName());
 
         // 设置更新时间为当前时间
         modelMetaInfoBO.setUpdateTime(new Date());
@@ -358,12 +358,12 @@ public class WfModelServiceImpl implements WfModelService {
         // 修改流程定义的分类，以便于搜索
         repositoryService.setProcessDefinitionCategory(processDefinition.getId(), model.getCategory());
 
-        // 设置流程定义的权限
-        // 用户
-        repositoryService.addCandidateStarterUser(processDefinition.getId(), "123L");
-
-        // 组
-        repositoryService.addCandidateStarterGroup(processDefinition.getId(), "321L");
+        // 设置流程的权限，一旦设置后不在当前id或者分组的都无法进行发起。
+//        LoginUser loginUser = LoginUtils.getLoginUser();
+//        // 用户
+//        repositoryService.addCandidateStarterUser(processDefinition.getId(), String.valueOf(loginUser.getUserId()));
+//        // 组
+//        repositoryService.addCandidateStarterGroup(processDefinition.getId(), "321L");
 
         // 保存部署表单
         return wfDeployService.saveInternalDeployForm(deployment.getId(), bpmnModel);

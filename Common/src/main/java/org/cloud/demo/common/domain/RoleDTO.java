@@ -1,13 +1,21 @@
-package org.cloud.demo.auth.domain.dto;
+package org.cloud.demo.common.domain;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.cloud.demo.common.validate.EditGroup;
 
 @Data
 public class RoleDTO {
+    /**
+     * 角色ID
+     */
+    @Schema(description = "角色ID")
+    @NotNull(message = "角色ID不能为空", groups = EditGroup.class)
+    private Long roleId;
+
     /**
      * 角色名称
      */

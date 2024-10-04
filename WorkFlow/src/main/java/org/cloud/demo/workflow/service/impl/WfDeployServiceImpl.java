@@ -7,6 +7,10 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.cloud.demo.common.domain.LoginUser;
+import org.cloud.demo.common.domain.RoleDTO;
+import org.cloud.demo.common.utils.LoginUtils;
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
@@ -35,6 +39,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WfDeployServiceImpl implements WfDeployService {
@@ -83,12 +88,12 @@ public class WfDeployServiceImpl implements WfDeployService {
 
     @Override
     public TableDataInfo<WfDeployVo> queryPageList(ProcessQuery processQuery, PageQuery pageQuery) {
-        // 比如这里查询出来用户的id和组
-        String userId = "123L";
-        String groupId = "321L";
+        LoginUser loginUser = LoginUtils.getLoginUser();
+        String userId = String.valueOf(loginUser.getUserId());
+        List<String> groupIds = loginUser.getRoles().stream().filter(ObjectUtil::isNotNull).map(RoleDTO::getRoleId).map(Object::toString).toList();
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
-                .startableByUserOrGroups(userId, Collections.singleton(groupId))
+                .startableByUserOrGroups(userId, groupIds)
                 .latestVersion()
                 .orderByProcessDefinitionKey()
                 .desc();

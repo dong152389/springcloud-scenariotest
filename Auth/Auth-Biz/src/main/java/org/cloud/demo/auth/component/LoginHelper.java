@@ -8,8 +8,8 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ObjectUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.cloud.demo.auth.domain.bo.LoginUser;
 import org.cloud.demo.common.constants.UserConstants;
+import org.cloud.demo.common.domain.LoginUser;
 import org.cloud.demo.common.enums.DeviceType;
 
 /**

@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.auth.domain.Role;
 import org.cloud.demo.auth.domain.RoleMenu;
-import org.cloud.demo.auth.domain.dto.RoleDTO;
 import org.cloud.demo.auth.mapper.RoleMapper;
 import org.cloud.demo.auth.mapper.RoleMenuMapper;
 import org.cloud.demo.auth.service.RoleService;

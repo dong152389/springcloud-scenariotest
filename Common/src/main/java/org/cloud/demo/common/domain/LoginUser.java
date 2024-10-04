@@ -1,9 +1,8 @@
-package org.cloud.demo.auth.domain.bo;
+package org.cloud.demo.common.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.cloud.demo.auth.domain.dto.RoleDTO;
 
 import java.io.Serial;
 import java.io.Serializable;

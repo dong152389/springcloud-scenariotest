@@ -1,5 +1,6 @@
 package org.cloud.demo.common.config.mp;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpStatus;
@@ -7,6 +8,7 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.cloud.demo.common.domain.BaseEntity;
+import org.cloud.demo.common.domain.LoginUser;
 import org.cloud.demo.common.web.exception.ServiceException;
 
 import java.util.Date;
@@ -61,7 +63,8 @@ public class CreateAndUpdateMetaObjectHandler implements MetaObjectHandler {
      * 获取登录用户名
      */
     private String getLoginUsername() {
-        return "admin";
+        LoginUser loginUser = (LoginUser) StpUtil.getTokenSession().get("loginUser");
+        return loginUser.getUsername();
     }
 
 }
