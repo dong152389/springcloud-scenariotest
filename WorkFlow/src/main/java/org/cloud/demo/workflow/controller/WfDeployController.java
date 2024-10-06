@@ -34,7 +34,7 @@ public class WfDeployController extends BaseController {
      * 查询流程部署列表
      */
     @GetMapping("/list")
-    @Operation(description = "查询流程部署列表", parameters = {
+    @Operation(summary = "查询流程部署列表", parameters = {
             @Parameter(name = "processQuery", description = "流程参数"),
             @Parameter(name = "pageQuery", description = "分页参数")})
     public TableDataInfo<WfDeployVo> list(ProcessQuery processQuery, PageQuery pageQuery) {

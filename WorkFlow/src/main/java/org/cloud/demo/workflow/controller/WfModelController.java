@@ -11,6 +11,7 @@ import org.cloud.demo.common.web.BaseController;
 import org.cloud.demo.common.web.domain.R;
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.page.PageQuery;
+import org.cloud.demo.workflow.domain.dto.DeployModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfBpmnModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfModelDTO;
 import org.cloud.demo.workflow.domain.vo.WfModelVo;
@@ -109,7 +110,7 @@ public class WfModelController extends BaseController {
      * @param wfModelDTO 流程模型对象
      * @param pageQuery  分页参数
      */
-    @Operation(description = "设为最新流程模型")
+    @Operation(description = "查询流程模型的历史版本")
     @GetMapping("/historyList")
     public TableDataInfo<WfModelVo> historyList(WfModelDTO wfModelDTO, PageQuery pageQuery) {
         return wfModelService.historyList(wfModelDTO, pageQuery);
@@ -138,14 +139,16 @@ public class WfModelController extends BaseController {
     }
 
 
+
     /**
      * 部署流程模型
      *
-     * @param modelId 流程模型主键
+     * @param deployModelDTO 部署模型DTO
+     * @return 返回结果
      */
     @Operation(description = "部署流程模型")
     @PostMapping("/deploy")
-    public R<Void> deploy(@RequestParam String modelId) {
-        return toAjax(wfModelService.deploy(modelId));
+    public R<Void> deploy(@RequestBody DeployModelDTO deployModelDTO) {
+        return toAjax(wfModelService.deploy(deployModelDTO));
     }
 }

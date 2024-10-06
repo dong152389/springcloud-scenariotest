@@ -88,11 +88,6 @@ public class LoginUser implements Serializable {
     private List<RoleDTO> roles;
 
     /**
-     * 数据权限 当前角色ID
-     */
-    private Long roleId;
-
-    /**
      * 获取登录id
      */
     public Long getLoginId() {

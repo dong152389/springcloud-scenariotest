@@ -51,11 +51,10 @@ public class WfDeployServiceImpl implements WfDeployService {
     /**
      * 保存内部部署表单信息
      *
-     * @param deployId 部署ID
+     * @param deployId  部署ID
      * @param bpmnModel BPMN模型
      * @return 保存是否成功
      * @throws ServiceException 如果开始节点不存在，抛出此异常
-     * @Transactional(rollbackFor = Exception.class) 如果在执行方法时发生异常，则回滚事务
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,13 +89,25 @@ public class WfDeployServiceImpl implements WfDeployService {
     public TableDataInfo<WfDeployVo> queryPageList(ProcessQuery processQuery, PageQuery pageQuery) {
         LoginUser loginUser = LoginUtils.getLoginUser();
         String userId = String.valueOf(loginUser.getUserId());
-        List<String> groupIds = loginUser.getRoles().stream().filter(ObjectUtil::isNotNull).map(RoleDTO::getRoleId).map(Object::toString).toList();
+        List<String> groupIds = Optional.ofNullable(loginUser.getRoles())
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(Objects::nonNull)
+                .map(RoleDTO::getRoleId)
+                .map(String::valueOf)
+                .collect(Collectors.toList());
+
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
-                .startableByUserOrGroups(userId, groupIds)
                 .latestVersion()
                 .orderByProcessDefinitionKey()
                 .desc();
+        if (CollUtil.isNotEmpty(groupIds)) {
+            processDefinitionQuery.startableByUserOrGroups(userId, groupIds);
+        } else {
+            processDefinitionQuery.startableByUser(userId);
+        }
+
         // 封装查询条件
         ProcessUtils.buildProcessSearch(processDefinitionQuery, processQuery);
         long total = processDefinitionQuery.count();
@@ -172,7 +183,7 @@ public class WfDeployServiceImpl implements WfDeployService {
      * 更新流程定义状态
      *
      * @param definitionId 流程定义ID
-     * @param state 流程定义状态（ACTIVE激活或SUSPENDED挂起）
+     * @param state        流程定义状态（ACTIVE激活或SUSPENDED挂起）
      * @throws IllegalArgumentException 如果state参数不为ACTIVE或SUSPENDED则抛出此异常
      */
     @Override

@@ -2,6 +2,7 @@ package org.cloud.demo.workflow.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -15,6 +16,7 @@ import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
 import org.cloud.demo.workflow.domain.bo.ModelMetaInfoBO;
+import org.cloud.demo.workflow.domain.dto.DeployModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfBpmnModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfModelDTO;
 import org.cloud.demo.workflow.domain.vo.WfModelVo;
@@ -318,13 +320,16 @@ public class WfModelServiceImpl implements WfModelService {
     }
 
     @Override
-    public boolean deploy(String modelId) {
+    public boolean deploy(DeployModelDTO deployModelDTO) {
+        String modelId = deployModelDTO.getModelId();
+        List<String> deployUsers = deployModelDTO.getDeployUsers();
+        List<String> deployGroups = deployModelDTO.getDeployGroups();
+
         Model model = repositoryService.getModel(modelId);
         if (ObjectUtil.isNull(model)) {
             throw new ServiceException("流程模型不存在！");
         }
 
-        // 获取流程设计图的字节数组
         // 以字节数组返回流程设计图
         byte[] bpmXmlByte = repositoryService.getModelEditorSource(modelId);
         if (ArrayUtil.isEmpty(bpmXmlByte)) {
@@ -359,12 +364,19 @@ public class WfModelServiceImpl implements WfModelService {
         repositoryService.setProcessDefinitionCategory(processDefinition.getId(), model.getCategory());
 
         // 设置流程的权限，一旦设置后不在当前id或者分组的都无法进行发起。
-//        LoginUser loginUser = LoginUtils.getLoginUser();
-//        // 用户
-//        repositoryService.addCandidateStarterUser(processDefinition.getId(), String.valueOf(loginUser.getUserId()));
-//        // 组
-//        repositoryService.addCandidateStarterGroup(processDefinition.getId(), "321L");
+        if (CollUtil.isNotEmpty(deployUsers)) {
+            // 用户
+            for (String userId : deployUsers) {
+                repositoryService.addCandidateStarterUser(processDefinition.getId(), userId);
+            }
 
+        }
+        if (CollUtil.isNotEmpty(deployGroups)) {
+            // 组
+            for (String groupId : deployUsers) {
+                repositoryService.addCandidateStarterGroup(processDefinition.getId(), groupId);
+            }
+        }
         // 保存部署表单
         return wfDeployService.saveInternalDeployForm(deployment.getId(), bpmnModel);
     }
@@ -426,7 +438,6 @@ public class WfModelServiceImpl implements WfModelService {
             return wfModelVo;
         }).collect(Collectors.toList());
     }
-
 
 
 }

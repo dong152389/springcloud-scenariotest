@@ -14,14 +14,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cloud.demo.auth.domain.vo.RoleVo;
+import org.cloud.demo.auth.domain.vo.UserVo;
 import org.cloud.demo.common.constants.ProcessConstants;
+import org.cloud.demo.common.constants.TaskConstants;
 import org.cloud.demo.common.enums.ProcessStatus;
+import org.cloud.demo.common.utils.LoginUtils;
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
 import org.cloud.demo.workflow.domain.WfDeployForm;
 import org.cloud.demo.workflow.domain.dto.ProcessQuery;
 import org.cloud.demo.workflow.domain.vo.*;
+import org.cloud.demo.workflow.feign.AuthFeignClient;
 import org.cloud.demo.workflow.mapper.WfDeployFormMapper;
 import org.cloud.demo.workflow.service.WfProcessService;
 import org.cloud.demo.workflow.service.WfTaskService;
@@ -39,6 +44,7 @@ import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.repository.ProcessDefinitionQuery;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.task.Comment;
+import org.flowable.identitylink.api.history.HistoricIdentityLink;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.TaskInfo;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -62,7 +68,7 @@ public class WfProcessServiceImpl implements WfProcessService {
     private final TaskService taskService;
     private final WfTaskService wfTaskService;
     private final WfDeployFormMapper wfDeployFormMapper;
-    private final userservice
+    private final AuthFeignClient authFeignClient;
 
 
     /**
@@ -158,14 +164,14 @@ public class WfProcessServiceImpl implements WfProcessService {
      */
     @Override
     public TableDataInfo<WfDefinitionVo> selectPageStartProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
-        String userId = "123L";
-        String groupId = "321L";
+        String userId = LoginUtils.getLoginUser().getUserId().toString();
+        List<String> roleIds = LoginUtils.getRoleIds();
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
                 .latestVersion()                //最新版本
                 .active()                       //活跃状态
                 .orderByProcessDefinitionKey()  //根据标识排序
-                .startableByUserOrGroups(userId, Collections.singleton(groupId))  //权限
+                .startableByUserOrGroups(userId, roleIds)  //权限
                 .desc();//倒叙
 
         // 构建查询参数
@@ -318,7 +324,9 @@ public class WfProcessServiceImpl implements WfProcessService {
                 .orderByHistoricActivityInstanceStartTime().desc()
                 .orderByHistoricActivityInstanceEndTime().desc()
                 .list();
-        List<Comment> processInstanceComments = taskService.getProcessInstanceComments(procInsId);
+        List<Comment> comments = taskService.getProcessInstanceComments(procInsId);
+
+        List<WfProcNodeVo> elementVoList = new ArrayList<>();
         for (HistoricActivityInstance activityInstance : historicActivityInstances) {
             WfProcNodeVo elementVo = new WfProcNodeVo();
             elementVo.setActivityId(activityInstance.getActivityId());
@@ -332,16 +340,70 @@ public class WfProcessServiceImpl implements WfProcessService {
             }
             if (BpmnXMLConstants.ELEMENT_EVENT_START.equals(activityInstance.getActivityType())) {
                 if (ObjectUtil.isNotNull(hisProcIns)) {
-                    Long userId = Long.parseLong(hisProcIns.getStartUserId());
-                    String nickName = userService.selectNickNameById(userId);
-                    if (nickName != null) {
+                    Long userId = Long.valueOf(hisProcIns.getStartUserId());
+                    UserVo userInfo = authFeignClient.getUserInfo(userId);
+                    if (ObjectUtil.isNotNull(userInfo)) {
                         elementVo.setAssigneeId(userId);
-                        elementVo.setAssigneeName(nickName);
+                        elementVo.setAssigneeName(userInfo.getUserName() + "-" + userInfo.getNickName());
                     }
                 }
-            }
-        }
+            } else if (BpmnXMLConstants.ELEMENT_TASK_USER.equals(activityInstance.getActivityType())) {
+                //用户ID
+                if (StrUtil.isNotBlank(activityInstance.getAssignee())) {
+                    Long userId = Long.valueOf(hisProcIns.getStartUserId());
+                    UserVo userInfo = authFeignClient.getUserInfo(userId);
+                    if (ObjectUtil.isNotNull(userInfo)) {
+                        elementVo.setAssigneeId(userId);
+                        elementVo.setAssigneeName(userInfo.getUserName() + "-" + userInfo.getNickName());
+                    }
+                }
+                // 展示审批人员
+                List<HistoricIdentityLink> linksForTask = historyService.getHistoricIdentityLinksForTask(activityInstance.getTaskId());
+                StringBuilder stringBuilder = new StringBuilder();
+                for (HistoricIdentityLink identityLink : linksForTask) {
+                    if ("candidate".equals(identityLink.getType())) {
+                        String userIdStr = identityLink.getUserId();
+                        if (StrUtil.isNotBlank(userIdStr)) {
+                            Long userId = Long.valueOf(userIdStr);
+                            UserVo userInfo = authFeignClient.getUserInfo(userId);
+                            String approveName = userInfo.getNickName() + "-" + userInfo.getUserName();
+                            stringBuilder.append(approveName).append(",");
+                        }
+                        String groupIdStr = identityLink.getGroupId();
+                        if (StrUtil.isNotBlank(groupIdStr)) {
+                            if (groupIdStr.startsWith(TaskConstants.ROLE_GROUP_PREFIX)) {
+                                Long roleId = Long.parseLong(StrUtil.removePrefix(groupIdStr, TaskConstants.ROLE_GROUP_PREFIX));
+                                RoleVo roleVo = authFeignClient.queryRoleByRoleId(roleId);
+                                if (ObjectUtil.isNotNull(roleVo)) {
+                                    stringBuilder.append(roleVo.getRoleName()).append(",");
+                                }
+                            }
+//                            else if (groupIdStr.startsWith(TaskConstants.DEPT_GROUP_PREFIX)) {
+//                                Long deptId = Long.parseLong(StrUtil.stripStart(identityLink.getGroupId(), TaskConstants.DEPT_GROUP_PREFIX));
+//                                SysDept dept = deptService.selectDeptById(deptId);
+//                                stringBuilder.append(dept.getDeptName()).append(",");
+//                            }
+                        }
+                    }
+                }
+                if (StrUtil.isNotBlank(stringBuilder)) {
+                    elementVo.setCandidate(stringBuilder.substring(0, stringBuilder.length() - 1));
+                }
+                // 获取意见评论内容
+                if (CollUtil.isNotEmpty(comments)) {
+                    List<Comment> commentList = new ArrayList<>();
+                    for (Comment comment : comments) {
 
+                        if (comment.getTaskId().equals(activityInstance.getTaskId())) {
+                            commentList.add(comment);
+                        }
+                    }
+                    elementVo.setCommentList(commentList);
+                }
+            }
+            elementVoList.add(elementVo);
+        }
+        return elementVoList;
     }
 
 

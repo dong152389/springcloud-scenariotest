@@ -3,6 +3,7 @@ package org.cloud.demo.workflow.service;
 
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.page.PageQuery;
+import org.cloud.demo.workflow.domain.dto.DeployModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfBpmnModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfModelDTO;
 import org.cloud.demo.workflow.domain.vo.WfModelVo;
@@ -28,5 +29,5 @@ public interface WfModelService {
 
     String queryBpmnXmlById(String modelId);
 
-    boolean deploy(String modelId);
+    boolean deploy(DeployModelDTO deployModelDTO);
 }
