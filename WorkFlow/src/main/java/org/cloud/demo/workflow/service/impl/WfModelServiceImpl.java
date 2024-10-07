@@ -369,7 +369,6 @@ public class WfModelServiceImpl implements WfModelService {
             for (String userId : deployUsers) {
                 repositoryService.addCandidateStarterUser(processDefinition.getId(), userId);
             }
-
         }
         if (CollUtil.isNotEmpty(deployGroups)) {
             // 组

@@ -96,20 +96,27 @@ public class WfDeployServiceImpl implements WfDeployService {
                 .map(RoleDTO::getRoleId)
                 .map(String::valueOf)
                 .collect(Collectors.toList());
-
+        if (CollUtil.isEmpty(groupIds)) {
+            return TableDataInfo.build();
+        }
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
                 .latestVersion()
                 .orderByProcessDefinitionKey()
+                .startableByUserOrGroups(userId, groupIds)
+                .desc();        // 创建查询对象
+        //todo 查询没权限的流程
+        ProcessDefinitionQuery noCandidatesQuery = repositoryService.createProcessDefinitionQuery()
+                .latestVersion()
+                .orderByProcessDefinitionKey()
+                .startableByUserOrGroups(userId, groupIds)
                 .desc();
-        if (CollUtil.isNotEmpty(groupIds)) {
-            processDefinitionQuery.startableByUserOrGroups(userId, groupIds);
-        } else {
-            processDefinitionQuery.startableByUser(userId);
-        }
+
 
         // 封装查询条件
         ProcessUtils.buildProcessSearch(processDefinitionQuery, processQuery);
+        ProcessUtils.buildProcessSearch(noCandidatesQuery, processQuery);
+
         long total = processDefinitionQuery.count();
         if (total <= 0) {
             return TableDataInfo.build();

@@ -1,6 +1,6 @@
 package org.cloud.demo.auth.service.impl;
 
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.auth.domain.User;
@@ -34,6 +34,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserVo getUserInfo(Long userId) {
-        return userMapper.selectVoOne(new LambdaQueryChainWrapper<>(userMapper).eq(User::getUserId, userId));
+        return userMapper.selectVoOne(new LambdaQueryWrapper<>(User.class).eq(User::getUserId, userId));
     }
 }

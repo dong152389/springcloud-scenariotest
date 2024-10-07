@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.auth.component.LoginHelper;
 import org.cloud.demo.auth.domain.User;
 import org.cloud.demo.auth.domain.dto.LoginDTO;
+import org.cloud.demo.auth.mapper.MenuMapper;
 import org.cloud.demo.auth.mapper.RoleMapper;
 import org.cloud.demo.auth.mapper.UserMapper;
 import org.cloud.demo.auth.service.LoginService;
@@ -21,13 +22,16 @@ import org.cloud.demo.common.domain.LoginUser;
 import org.cloud.demo.common.domain.RoleDTO;
 import org.cloud.demo.common.enums.DeviceType;
 import org.cloud.demo.common.enums.UserStatus;
+import org.cloud.demo.common.utils.StringUtils;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -37,7 +41,14 @@ public class LoginServiceImpl implements LoginService {
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
     private final RoleMapper roleMapper;
+    private final MenuMapper menuMapper;
 
+    /**
+     * 用户登录方法
+     *
+     * @param loginDto 登录信息
+     * @return 登录成功后的token
+     */
     @Override
     public String login(LoginDTO loginDto) {
         User user = loadUserByUsername(loginDto.getUsername());
@@ -49,6 +60,12 @@ public class LoginServiceImpl implements LoginService {
         return StpUtil.getTokenValue();
     }
 
+    /**
+     * 构建登录用户信息
+     *
+     * @param user 用户信息
+     * @return 登录用户信息
+     */
     private LoginUser buildLoginUser(User user) {
         LoginUser loginUser = new LoginUser();
         loginUser.setUserId(user.getUserId());
@@ -58,9 +75,45 @@ public class LoginServiceImpl implements LoginService {
         loginUser.setExpireTime(DateUtil.offsetDay(new Date(), UserConstants.TOKEN_EXPIRE));
         loginUser.setOs(SystemUtil.getOsInfo().getName());
         loginUser.setNickName(user.getNickName());
-        List<RoleDTO> roleList = roleMapper.selectRoleByUserId(user.getUserId());
-        loginUser.setRoles(roleList);
+        List<RoleDTO> roleDTOS = roleMapper.selectRoleByUserId(user.getUserId());
+        loginUser.setRoles(roleDTOS);
+        loginUser.setMenuPermission(getMenuPermission(user));
+        loginUser.setRolePermission(getRolePermission(roleDTOS));
         return loginUser;
+    }
+
+
+    /**
+     * 获取用户角色权限集合
+     *
+     * @param roleDTOS 角色列表
+     * @return 用户权限集合
+     */
+    private Set<String> getRolePermission(List<RoleDTO> roleDTOS) {
+        Set<String> permsSet = new HashSet<>();
+        for (RoleDTO perm : roleDTOS) {
+            if (ObjectUtil.isNotNull(perm)) {
+                permsSet.addAll(StringUtils.splitList(perm.getRoleKey().trim()));
+            }
+        }
+        return permsSet;
+    }
+
+    /**
+     * 获取用户的菜单权限
+     *
+     * @param user 用户对象
+     * @return 返回用户的菜单权限集合
+     */
+    private Set<String> getMenuPermission(User user) {
+        Set<String> perms = new HashSet<>();
+        // 管理员拥有所有权限
+        if (user.isAdmin()) {
+            perms.add("*:*:*");
+        } else {
+            perms.addAll(menuMapper.selectMenuPermsByUserId(user.getUserId()));
+        }
+        return perms;
     }
 
 

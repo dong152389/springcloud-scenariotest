@@ -30,4 +30,15 @@
     is_cache, menu_type, visible, `status`, perms, icon, create_by, create_time, update_by, 
     update_time, remark
   </sql>
+
+  <select id="selectMenuPermsByUserId" resultType="java.lang.String">
+      SELECT DISTINCT m.perms
+      FROM sys_menu m
+               LEFT JOIN sys_role_menu rm ON m.menu_id = rm.menu_id
+               LEFT JOIN sys_user_role sur ON rm.role_id = sur.role_id
+               LEFT JOIN sys_role r ON r.role_id = sur.role_id
+      WHERE m.STATUS = '0'
+        AND r.STATUS = '0'
+        AND sur.user_id = #{userId}
+  </select>
 </mapper>

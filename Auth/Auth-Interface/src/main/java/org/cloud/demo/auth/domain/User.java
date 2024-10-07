@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.cloud.demo.common.constants.UserConstants;
 import org.cloud.demo.common.domain.BaseEntity;
 
 import java.io.Serializable;
@@ -129,4 +130,8 @@ public class User extends BaseEntity implements Serializable {
     @Schema(description="备注")
     @Size(max = 500,message = "备注最大长度要小于 500")
     private String remark;
+
+    public boolean isAdmin() {
+        return UserConstants.ADMIN_ID.equals(this.userId);
+    }
 }
