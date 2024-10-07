@@ -65,15 +65,9 @@
         </dependency>
         <dependency>
             <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-spring-boot3-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-redis-jackson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
+            <artifactId>sa-token-core</artifactId>
+            <version>${sa.token.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

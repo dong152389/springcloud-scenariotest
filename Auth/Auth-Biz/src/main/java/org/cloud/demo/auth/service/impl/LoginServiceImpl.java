@@ -12,11 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.cloud.demo.auth.component.LoginHelper;
 import org.cloud.demo.auth.domain.User;
 import org.cloud.demo.auth.domain.dto.LoginDTO;
+import org.cloud.demo.auth.mapper.RoleMapper;
 import org.cloud.demo.auth.mapper.UserMapper;
 import org.cloud.demo.auth.service.LoginService;
 import org.cloud.demo.common.constants.CacheConstants;
 import org.cloud.demo.common.constants.UserConstants;
 import org.cloud.demo.common.domain.LoginUser;
+import org.cloud.demo.common.domain.RoleDTO;
 import org.cloud.demo.common.enums.DeviceType;
 import org.cloud.demo.common.enums.UserStatus;
 import org.cloud.demo.common.web.exception.ServiceException;
@@ -25,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -33,6 +36,7 @@ public class LoginServiceImpl implements LoginService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
+    private final RoleMapper roleMapper;
 
     @Override
     public String login(LoginDTO loginDto) {
@@ -54,6 +58,8 @@ public class LoginServiceImpl implements LoginService {
         loginUser.setExpireTime(DateUtil.offsetDay(new Date(), UserConstants.TOKEN_EXPIRE));
         loginUser.setOs(SystemUtil.getOsInfo().getName());
         loginUser.setNickName(user.getNickName());
+        List<RoleDTO> roleList = roleMapper.selectRoleByUserId(user.getUserId());
+        loginUser.setRoles(roleList);
         return loginUser;
     }
 

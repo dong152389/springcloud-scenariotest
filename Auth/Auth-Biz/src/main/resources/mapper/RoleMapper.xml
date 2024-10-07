@@ -30,4 +30,14 @@
         update_time,
         remark
     </sql>
+
+    <select id="selectRoleByUserId" resultType="org.cloud.demo.common.domain.RoleDTO">
+        select role_id   as roleId,
+               role_name as roleName,
+               role_key  as roleKey,
+               role_sort as roleSort,
+               remark    as remark
+        from sys_role
+        where role_id in (select role_id from sys_user_role where user_id = #{userId})
+    </select>
 </mapper>
