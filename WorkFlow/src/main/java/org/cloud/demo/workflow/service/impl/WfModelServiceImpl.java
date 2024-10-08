@@ -15,11 +15,15 @@ import org.cloud.demo.common.utils.LoginUtils;
 import org.cloud.demo.common.web.domain.TableDataInfo;
 import org.cloud.demo.common.web.exception.ServiceException;
 import org.cloud.demo.common.web.page.PageQuery;
+import org.cloud.demo.workflow.domain.ProcDefRole;
+import org.cloud.demo.workflow.domain.ProcDefUser;
 import org.cloud.demo.workflow.domain.bo.ModelMetaInfoBO;
 import org.cloud.demo.workflow.domain.dto.DeployModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfBpmnModelDTO;
 import org.cloud.demo.workflow.domain.dto.WfModelDTO;
 import org.cloud.demo.workflow.domain.vo.WfModelVo;
+import org.cloud.demo.workflow.mapper.ProcDefRoleMapper;
+import org.cloud.demo.workflow.mapper.ProcDefUserMapper;
 import org.cloud.demo.workflow.service.WfDeployService;
 import org.cloud.demo.workflow.service.WfModelService;
 import org.cloud.demo.workflow.utils.ModelUtils;
@@ -33,6 +37,7 @@ import org.flowable.engine.repository.ProcessDefinition;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -44,6 +49,8 @@ public class WfModelServiceImpl implements WfModelService {
 
     private final RepositoryService repositoryService;
     private final WfDeployService wfDeployService;
+    private final ProcDefUserMapper procDefUserMapper;
+    private final ProcDefRoleMapper procDefRoleMapper;
 
     /**
      * 重构MetaInfo
@@ -322,8 +329,6 @@ public class WfModelServiceImpl implements WfModelService {
     @Override
     public boolean deploy(DeployModelDTO deployModelDTO) {
         String modelId = deployModelDTO.getModelId();
-        List<String> deployUsers = deployModelDTO.getDeployUsers();
-        List<String> deployGroups = deployModelDTO.getDeployGroups();
 
         Model model = repositoryService.getModel(modelId);
         if (ObjectUtil.isNull(model)) {
@@ -363,18 +368,31 @@ public class WfModelServiceImpl implements WfModelService {
         // 修改流程定义的分类，以便于搜索
         repositoryService.setProcessDefinitionCategory(processDefinition.getId(), model.getCategory());
 
-        // 设置流程的权限，一旦设置后不在当前id或者分组的都无法进行发起。
-        if (CollUtil.isNotEmpty(deployUsers)) {
+        // 设置流程的权限，但是不能用flowable自己的流程权限设计。
+        List<Long> userIds = deployModelDTO.getDeployUserIds();
+        if (CollUtil.isNotEmpty(userIds)) {
+            List<ProcDefUser> userList = new ArrayList<>();
+            for (Long userId : userIds) {
+                ProcDefUser procDefUser = new ProcDefUser();
+                procDefUser.setProcDefId(processDefinition.getId());
+                procDefUser.setUserId(userId);
+                userList.add(procDefUser);
+            }
             // 用户
-            for (String userId : deployUsers) {
-                repositoryService.addCandidateStarterUser(processDefinition.getId(), userId);
-            }
+            procDefUserMapper.insertBatch(userList);
         }
-        if (CollUtil.isNotEmpty(deployGroups)) {
+        List<Long> groupIds = deployModelDTO.getDeployGroupIds();
+        if (CollUtil.isNotEmpty(groupIds)) {
             // 组
-            for (String groupId : deployUsers) {
-                repositoryService.addCandidateStarterGroup(processDefinition.getId(), groupId);
+            List<ProcDefRole> groupList = new ArrayList<>();
+            for (Long groupId : groupIds) {
+                ProcDefRole procDefRole = new ProcDefRole();
+                procDefRole.setProcDefId(processDefinition.getId());
+                procDefRole.setRoleId(groupId);
+                groupList.add(procDefRole);
             }
+            // 用户
+            procDefRoleMapper.insertBatch(groupList);
         }
         // 保存部署表单
         return wfDeployService.saveInternalDeployForm(deployment.getId(), bpmnModel);

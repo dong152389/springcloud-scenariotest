@@ -13,7 +13,7 @@ public class DeployModelDTO {
     @Schema(description = "模型ID")
     private String modelId;
     @Schema(description = "部署模型权限-用户")
-    private List<String> deployUsers;
+    private List<Long> deployUserIds;
     @Schema(description = "部署模型权限-组")
-    private List<String> deployGroups;
+    private List<Long> deployGroupIds;
 }

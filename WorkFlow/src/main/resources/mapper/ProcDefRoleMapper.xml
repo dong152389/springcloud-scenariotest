@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.cloud.demo.workflow.mapper.ProcDefRoleMapper">
+  <resultMap id="BaseResultMap" type="org.cloud.demo.workflow.domain.ProcDefRole">
+    <!--@mbg.generated-->
+    <!--@Table proc_def_role-->
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="proc_def_id" jdbcType="VARCHAR" property="procDefId" />
+    <result column="role_id" jdbcType="BIGINT" property="roleId" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    id, proc_def_id, role_id
+  </sql>
+</mapper>

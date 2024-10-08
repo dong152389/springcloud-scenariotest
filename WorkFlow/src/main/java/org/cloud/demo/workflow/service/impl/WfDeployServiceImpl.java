@@ -105,17 +105,10 @@ public class WfDeployServiceImpl implements WfDeployService {
                 .orderByProcessDefinitionKey()
                 .startableByUserOrGroups(userId, groupIds)
                 .desc();        // 创建查询对象
-        //todo 查询没权限的流程
-        ProcessDefinitionQuery noCandidatesQuery = repositoryService.createProcessDefinitionQuery()
-                .latestVersion()
-                .orderByProcessDefinitionKey()
-                .startableByUserOrGroups(userId, groupIds)
-                .desc();
 
 
         // 封装查询条件
         ProcessUtils.buildProcessSearch(processDefinitionQuery, processQuery);
-        ProcessUtils.buildProcessSearch(noCandidatesQuery, processQuery);
 
         long total = processDefinitionQuery.count();
         if (total <= 0) {
