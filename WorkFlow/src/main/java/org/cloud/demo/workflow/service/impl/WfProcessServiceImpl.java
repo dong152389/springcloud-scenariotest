@@ -27,6 +27,8 @@ import org.cloud.demo.workflow.domain.WfDeployForm;
 import org.cloud.demo.workflow.domain.dto.ProcessQuery;
 import org.cloud.demo.workflow.domain.vo.*;
 import org.cloud.demo.workflow.feign.AuthFeignClient;
+import org.cloud.demo.workflow.mapper.ProcDefRoleMapper;
+import org.cloud.demo.workflow.mapper.ProcDefUserMapper;
 import org.cloud.demo.workflow.mapper.WfDeployFormMapper;
 import org.cloud.demo.workflow.service.WfProcessService;
 import org.cloud.demo.workflow.service.WfTaskService;
@@ -69,6 +71,8 @@ public class WfProcessServiceImpl implements WfProcessService {
     private final WfTaskService wfTaskService;
     private final WfDeployFormMapper wfDeployFormMapper;
     private final AuthFeignClient authFeignClient;
+    private final ProcDefUserMapper procDefUserMapper;
+    private final ProcDefRoleMapper procDefRoleMapper;
 
 
     /**
@@ -164,16 +168,44 @@ public class WfProcessServiceImpl implements WfProcessService {
      */
     @Override
     public TableDataInfo<WfDefinitionVo> selectPageStartProcessList(ProcessQuery processQuery, PageQuery pageQuery) {
+
         String userId = LoginUtils.getLoginUser().getUserId().toString();
-        List<String> roleIds = LoginUtils.getRoleIds();
+        List<Long> roleIds = LoginUtils.getRoleIds();
+
+        // 查询用户可以发起的流程
+        List<String> procDefId1 = procDefUserMapper.selectProcDefIdByUserId(LoginUtils.getLoginUser().getUserId());
+        List<String> procDefId2 = procDefRoleMapper.selectProcDefIdByRoleIds(roleIds);
+        Set<String> procDefIdList = new HashSet<>(CollUtil.union(procDefId1, procDefId2));
+
         // 创建查询对象
         ProcessDefinitionQuery processDefinitionQuery = repositoryService.createProcessDefinitionQuery()
                 .latestVersion()                //最新版本
                 .active()                       //活跃状态
                 .orderByProcessDefinitionKey()  //根据标识排序
-                .startableByUserOrGroups(userId, roleIds)  //权限
-                .desc();//倒叙
+                .desc();                        //倒叙
 
+        if (CollectionUtil.isNotEmpty(procDefIdList)) {
+            // 设置可查询的流程权限
+            processDefinitionQuery.processDefinitionIds(procDefIdList);
+        } else {
+            // 如果没有权限限制，查询所有流程
+            List<ProcessDefinition> allProcessDefinitions = processDefinitionQuery.list();
+            if (CollUtil.isNotEmpty(allProcessDefinitions)) {
+                Set<String> allIds = allProcessDefinitions.stream().map(ProcessDefinition::getId).collect(Collectors.toSet());
+
+                // 查询所有流程权限
+                procDefId1 = procDefUserMapper.selectProcDefIdList();
+                procDefId2 = procDefRoleMapper.selectProcDefIdList();
+                Set<String> allProcDefIds = new HashSet<>(procDefId1);
+                allProcDefIds.addAll(procDefId2);
+
+                // 排除掉不在权限范围内的流程
+                allIds.removeAll(allProcDefIds);
+
+                // 设置可查询的流程权限
+                processDefinitionQuery.processDefinitionIds(allIds);
+            }
+        }
         // 构建查询参数
         ProcessUtils.buildProcessSearch(processDefinitionQuery, processQuery);
         long pageTotal = processDefinitionQuery.count();

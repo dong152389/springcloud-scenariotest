@@ -17,10 +17,10 @@ public class LoginUtils {
         return getLoginUser().getUsername();
     }
 
-    public static List<String> getRoleIds() {
+    public static List<Long> getRoleIds() {
         List<RoleDTO> roles = getLoginUser().getRoles();
         if (CollUtil.isNotEmpty(roles)) {
-            return roles.stream().map(RoleDTO::getRoleId).map(Object::toString).toList();
+            return roles.stream().map(RoleDTO::getRoleId).toList();
 
         }
         return List.of();
